@@ -458,6 +458,15 @@ document.getElementById('fontSizeInput').addEventListener('input', (e)=>{
   document.getElementById('fontSizeValue').textContent = px + 'px';
 });
 
+// 首次使用時填入示範用虛擬資料（非真實姓名/地址），方便使用者了解格式
+if(senders.length === 0 && recipients.length === 0 && !localStorage.getItem('labelTool_seeded_v2')){
+  senders.push({id:uid(), name:'王小明 先生（範例，請修改）', postal:'100', address:'台北市中正區忠孝西路一段 1 號 10 樓（範例地址）', phone:''});
+  recipients.push({id:uid(), name:'範例股份有限公司 敬啟 / 收', postal:'106', address:'台北市大安區信義路四段 1 號 5 樓（範例地址）', phone:'02-1234-5678'});
+  saveList(SENDER_KEY, senders);
+  saveList(RECIPIENT_KEY, recipients);
+  localStorage.setItem('labelTool_seeded_v2', '1');
+}
+
 renderAll();
 </script>
 </body>
