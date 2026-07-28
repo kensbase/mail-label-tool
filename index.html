@@ -220,7 +220,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 function fieldsForm(prefix, data){
   data = data || {name:'', postal:'', address:'', phone:''};
   return `
-    <div class="row"><label>名稱</label><input type="text" id="${prefix}_name" placeholder="例：王世豐 先生 / 美麗家工程有限公司 敬啟" value="${escapeHtml(data.name)}"></div>
+    <div class="row"><label>名稱</label><input type="text" id="${prefix}_name" placeholder="例：王小明 先生 / 範例股份有限公司 敬啟" value="${escapeHtml(data.name)}"></div>
     <div class="row"><label>地址</label><input type="text" id="${prefix}_address" placeholder="完整地址" value="${escapeHtml(data.address)}"></div>
     <div class="row">
       <label>郵遞區號</label>
