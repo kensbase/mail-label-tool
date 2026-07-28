@@ -458,15 +458,6 @@ document.getElementById('fontSizeInput').addEventListener('input', (e)=>{
   document.getElementById('fontSizeValue').textContent = px + 'px';
 });
 
-// seed example data on first run so the tool isn't empty
-if(senders.length === 0 && recipients.length === 0 && !localStorage.getItem('labelTool_seeded')){
-  senders.push({id:uid(), name:'王世豐 先生', postal:'333', address:'桃園市龜山區樂學路 556 號 15 樓', phone:''});
-  recipients.push({id:uid(), name:'美麗家工程有限公司 敬啟 / 收', postal:'23643', address:'新北市土城區金城路 3 段 8 號 5F', phone:'02-22611233'});
-  saveList(SENDER_KEY, senders);
-  saveList(RECIPIENT_KEY, recipients);
-  localStorage.setItem('labelTool_seeded', '1');
-}
-
 renderAll();
 </script>
 </body>
