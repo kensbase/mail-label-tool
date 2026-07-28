@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>寄回地址標籤產生工具</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --blue:#2563eb;
+    --blue-dark:#1d4ed8;
+    --red:#c0392b;
+    --bg:#f4f6f9;
+    --panel:#ffffff;
+    --border:#d7dde5;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --label-bg:#eef2f7;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .app{
+    display:grid;
+    grid-template-columns:380px 1fr;
+    gap:20px;
+    padding:20px;
+    max-width:1400px;
+    margin:0 auto;
+  }
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .panel h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;}
+  .row{display:flex;gap:8px;margin-bottom:8px;}
+  .row label{width:64px;flex:none;font-size:13px;color:var(--muted);padding-top:8px;}
+  input[type=text], input[type=number], select, textarea{
+    flex:1;
+    padding:7px 9px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:14px;
+    font-family:inherit;
+    background:#fff;
+  }
+  button{
+    cursor:pointer;
+    border:none;
+    border-radius:6px;
+    padding:8px 14px;
+    font-size:13px;
+    font-family:inherit;
+  }
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:var(--blue-dark);}
+  .btn-ghost{background:#eef1f5;color:var(--text);}
+  .btn-ghost:hover{background:#e2e7ee;}
+  .btn-danger{background:#fdecea;color:var(--red);}
+  .btn-danger:hover{background:#fbdad6;}
+  .btn-sm{padding:4px 8px;font-size:12px;}
+  .addr-list{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow:auto;margin-bottom:10px;}
+  .addr-item{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:12.5px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .addr-item .info{line-height:1.5;}
+  .addr-item .info b{font-size:13px;}
+  .addr-item .actions{display:flex;gap:4px;flex:none;}
+  .empty-hint{color:var(--muted);font-size:12.5px;padding:8px 2px;}
+  .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+  .gen-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;}
+  .gen-field{display:flex;flex-direction:column;gap:4px;}
+  .gen-field label{font-size:12.5px;color:var(--muted);}
+  .gen-field select, .gen-field input{min-width:170px;}
+  .qty-field input{width:80px;min-width:0;}
+
+  /* ---- Preview / print area ---- */
+  .page-wrap{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:6px;
+    overflow:auto;
+    padding:20px;
+  }
+  #printArea{
+    width:210mm;
+    min-height:297mm;
+    margin:0 auto;
+    background:#fff;
+    padding:10mm;
+    display:flex;
+    flex-direction:column;
+    gap:5mm;
+    --lbl-font-size:16px;
+  }
+  .label-block{
+    position:relative;
+    border:2px dashed #9aa7b8;
+    border-radius:6px;
+    background:var(--label-bg);
+    padding:10px 16px 16px;
+    flex:none;
+    font-size:var(--lbl-font-size);
+  }
+  .from-title{font-weight:700;font-size:1.05em;margin:6px 0 6px;}
+  .field-line{font-size:1em;margin:3px 0;}
+  .field-line .val{font-weight:700;}
+  .postal-from .val{color:var(--blue);}
+  .to-box{
+    margin-top:8px;
+    border:2px solid var(--blue);
+    border-radius:8px;
+    background:#fff;
+    padding:10px 14px 12px;
+  }
+  .to-title{font-weight:700;font-size:1.05em;margin:2px 0 8px;}
+  .to-box .field-line{font-size:1.05em;margin:5px 0;}
+  .postal-to .val{color:var(--red);}
+  .empty-preview{
+    color:var(--muted);
+    font-size:14px;
+    text-align:center;
+    padding:60px 0;
+  }
+
+  @media print{
+    body *{visibility:hidden;}
+    .page-wrap, .page-wrap *{visibility:visible;}
+    .page-wrap{border:none;padding:0;overflow:visible;position:absolute;top:0;left:0;width:auto;}
+    #printArea{margin:0;box-shadow:none;}
+    @page{size:A4;margin:0;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT: address book -->
+  <div>
+    <div class="panel">
+      <h1>寄回地址標籤產生工具</h1>
+      <p class="sub">管理常用地址，選一組寄件人／收件人，自動印滿整張 A4。</p>
+    </div>
+
+    <div class="panel">
+      <h2>寄件人清單</h2>
+      <div class="addr-list" id="senderList"></div>
+      <div id="senderForm"></div>
+    </div>
+
+    <div class="panel">
+      <h2>收件人清單</h2>
+      <div class="addr-list" id="recipientList"></div>
+      <div id="recipientForm"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: generate + preview -->
+  <div>
+    <div class="panel">
+      <h2>產生標籤</h2>
+      <div class="gen-controls">
+        <div class="gen-field">
+          <label>寄件人</label>
+          <select id="senderSelect"></select>
+        </div>
+        <div class="gen-field">
+          <label>收件人</label>
+          <select id="recipientSelect"></select>
+        </div>
+        <div class="gen-field qty-field">
+          <label>張數（自動印滿 A4）</label>
+          <input type="number" id="qtyInput" min="1" value="1">
+        </div>
+        <div class="gen-field">
+          <label>文字大小：<span id="fontSizeValue">16px</span></label>
+          <input type="range" id="fontSizeInput" min="16" max="32" step="4" value="16">
+        </div>
+        <button class="btn-ghost" id="recalcBtn">重新計算滿版張數</button>
+        <button class="btn-primary" id="printBtn">列印</button>
+      </div>
+    </div>
+
+    <div class="panel page-wrap">
+      <div id="printArea"><div class="empty-preview">請先建立並選擇寄件人與收件人地址</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SENDER_KEY = 'labelTool_senders_v1';
+const RECIPIENT_KEY = 'labelTool_recipients_v1';
+
+function loadList(key){
+  try{ return JSON.parse(localStorage.getItem(key)) || []; }catch(e){ return []; }
+}
+function saveList(key, list){ localStorage.setItem(key, JSON.stringify(list)); }
+
+let senders = loadList(SENDER_KEY);
+let recipients = loadList(RECIPIENT_KEY);
+let editingSenderId = null;
+let editingRecipientId = null;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function fieldsForm(prefix, data){
+  data = data || {name:'', postal:'', address:'', phone:''};
+  return `
+    <div class="row"><label>名稱</label><input type="text" id="${prefix}_name" placeholder="例：王世豐 先生 / 美麗家工程有限公司 敬啟" value="${escapeHtml(data.name)}"></div>
+    <div class="row"><label>地址</label><input type="text" id="${prefix}_address" placeholder="完整地址" value="${escapeHtml(data.address)}"></div>
+    <div class="row">
+      <label>郵遞區號</label>
+      <div style="display:flex;gap:6px;flex:1;">
+        <input type="text" id="${prefix}_postal" placeholder="例：333" value="${escapeHtml(data.postal)}" style="flex:1;">
+        <button type="button" class="btn-ghost btn-sm" id="${prefix}_lookupBtn" onclick="lookupPostal('${prefix}')">自動查詢</button>
+      </div>
+    </div>
+    <div class="row"><label></label><span id="${prefix}_postalStatus" style="font-size:11.5px;color:var(--muted);"></span></div>
+    <div class="row"><label>電話</label><input type="text" id="${prefix}_phone" placeholder="選填" value="${escapeHtml(data.phone)}"></div>
+    <div class="form-actions">
+      <button class="btn-ghost" onclick="cancelEdit('${prefix}')">取消</button>
+      <button class="btn-primary" onclick="saveAddress('${prefix}')">${(prefix==='sender'?editingSenderId:editingRecipientId) ? '更新' : '新增地址'}</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">郵遞區號查詢資料來源：<a href="https://zip5.5432.tw" target="_blank" rel="noopener">zip5.5432.tw</a>（非官方，僅供參考，請以實際投遞為準）</div>`;
+}
+
+async function lookupPostal(prefix){
+  const addrInput = document.getElementById(prefix+'_address');
+  const postalInput = document.getElementById(prefix+'_postal');
+  const statusEl = document.getElementById(prefix+'_postalStatus');
+  const btn = document.getElementById(prefix+'_lookupBtn');
+  const address = addrInput.value.trim();
+  if(!address){
+    statusEl.textContent = '請先輸入地址';
+    return;
+  }
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = '查詢中…';
+  statusEl.textContent = '';
+  try{
+    const res = await fetch('https://zip5.5432.tw/zip5json.py?adrs=' + encodeURIComponent(address));
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const zip = data.zipcode6 || data.zipcode || '';
+    if(zip){
+      postalInput.value = zip;
+      statusEl.textContent = (data.zipcode6 ? '已帶入 3+3 碼' : '已帶入 3+2 碼') + '（僅供參考，建議核對）';
+    }else{
+      statusEl.textContent = '查無對應郵遞區號，請手動輸入';
+    }
+  }catch(err){
+    statusEl.textContent = '查詢失敗，請檢查網路連線或手動輸入';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderForms(){
+  document.getElementById('senderForm').innerHTML = fieldsForm('sender',
+    editingSenderId ? senders.find(s=>s.id===editingSenderId) : null);
+  document.getElementById('recipientForm').innerHTML = fieldsForm('recipient',
+    editingRecipientId ? recipients.find(r=>r.id===editingRecipientId) : null);
+}
+
+function cancelEdit(prefix){
+  if(prefix==='sender') editingSenderId = null; else editingRecipientId = null;
+  renderForms();
+}
+
+function saveAddress(prefix){
+  const name = document.getElementById(prefix+'_name').value.trim();
+  const postal = document.getElementById(prefix+'_postal').value.trim();
+  const address = document.getElementById(prefix+'_address').value.trim();
+  const phone = document.getElementById(prefix+'_phone').value.trim();
+  if(!name || !address){
+    alert('請至少填寫名稱與地址');
+    return;
+  }
+  if(prefix==='sender'){
+    if(editingSenderId){
+      const item = senders.find(s=>s.id===editingSenderId);
+      Object.assign(item, {name, postal, address, phone});
+      editingSenderId = null;
+    }else{
+      senders.push({id:uid(), name, postal, address, phone});
+    }
+    saveList(SENDER_KEY, senders);
+  }else{
+    if(editingRecipientId){
+      const item = recipients.find(r=>r.id===editingRecipientId);
+      Object.assign(item, {name, postal, address, phone});
+      editingRecipientId = null;
+    }else{
+      recipients.push({id:uid(), name, postal, address, phone});
+    }
+    saveList(RECIPIENT_KEY, recipients);
+  }
+  renderAll();
+}
+
+function deleteAddress(prefix, id){
+  if(!confirm('確定要刪除這筆地址嗎？')) return;
+  if(prefix==='sender'){
+    senders = senders.filter(s=>s.id!==id);
+    saveList(SENDER_KEY, senders);
+  }else{
+    recipients = recipients.filter(r=>r.id!==id);
+    saveList(RECIPIENT_KEY, recipients);
+  }
+  renderAll();
+}
+
+function editAddress(prefix, id){
+  if(prefix==='sender') editingSenderId = id; else editingRecipientId = id;
+  renderForms();
+}
+
+function renderAddrList(containerId, list, prefix){
+  const el = document.getElementById(containerId);
+  if(list.length === 0){
+    el.innerHTML = '<div class="empty-hint">尚無常用地址，於下方新增</div>';
+    return;
+  }
+  el.innerHTML = list.map(item => `
+    <div class="addr-item">
+      <div class="info">
+        <b>${escapeHtml(item.name)}</b><br>
+        ${escapeHtml(item.postal)} ${escapeHtml(item.address)}${item.phone ? '　'+escapeHtml(item.phone) : ''}
+      </div>
+      <div class="actions">
+        <button class="btn-ghost btn-sm" onclick="editAddress('${prefix}','${item.id}')">編輯</button>
+        <button class="btn-danger btn-sm" onclick="deleteAddress('${prefix}','${item.id}')">刪除</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderSelects(){
+  const sSel = document.getElementById('senderSelect');
+  const rSel = document.getElementById('recipientSelect');
+  const prevS = sSel.value, prevR = rSel.value;
+  sSel.innerHTML = senders.length
+    ? senders.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')
+    : '<option value="">尚無寄件人</option>';
+  rSel.innerHTML = recipients.length
+    ? recipients.map(r=>`<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')
+    : '<option value="">尚無收件人</option>';
+  if(senders.some(s=>s.id===prevS)) sSel.value = prevS;
+  if(recipients.some(r=>r.id===prevR)) rSel.value = prevR;
+}
+
+function labelBlockHtml(sender, recipient){
+  return `
+    <div class="label-block">
+      <div class="from-title">【寄件人 From】</div>
+      <div class="field-line postal-from">郵遞區號：<span class="val">${escapeHtml(sender.postal)}</span></div>
+      <div class="field-line">地址：${escapeHtml(sender.address)}</div>
+      <div class="field-line">姓名：<span class="val">${escapeHtml(sender.name)}</span></div>
+      <div class="field-line">電話：${sender.phone ? escapeHtml(sender.phone) : '____________________'}</div>
+      <div class="to-box">
+        <div class="to-title">【收件人 To】</div>
+        <div class="field-line postal-to">郵遞區號：<span class="val">${escapeHtml(recipient.postal)}</span></div>
+        <div class="field-line">地址：<span class="val">${escapeHtml(recipient.address)}</span></div>
+        <div class="field-line">收件：<span class="val">${escapeHtml(recipient.name)}</span></div>
+        <div class="field-line">電話：<span class="val">${recipient.phone ? escapeHtml(recipient.phone) : '____________________'}</span></div>
+      </div>
+    </div>`;
+}
+
+function getSelectedSender(){
+  const id = document.getElementById('senderSelect').value;
+  return senders.find(s=>s.id===id);
+}
+function getSelectedRecipient(){
+  const id = document.getElementById('recipientSelect').value;
+  return recipients.find(r=>r.id===id);
+}
+
+function renderPreview(qty){
+  const area = document.getElementById('printArea');
+  const sender = getSelectedSender();
+  const recipient = getSelectedRecipient();
+  if(!sender || !recipient){
+    area.innerHTML = '<div class="empty-preview">請先建立並選擇寄件人與收件人地址</div>';
+    return;
+  }
+  let html = '';
+  for(let i=0;i<qty;i++) html += labelBlockHtml(sender, recipient);
+  area.innerHTML = html;
+}
+
+function autoCalcQty(){
+  const sender = getSelectedSender();
+  const recipient = getSelectedRecipient();
+  if(!sender || !recipient) return 1;
+  const area = document.getElementById('printArea');
+  area.innerHTML = labelBlockHtml(sender, recipient);
+  const block = area.querySelector('.label-block');
+  const blockHeight = block.offsetHeight;
+  const gapPx = 5 * (96/25.4); // 5mm gap in px
+  const pagePaddingPx = 10 * (96/25.4) * 2; // top+bottom 10mm padding
+  const pageHeightPx = 297 * (96/25.4);
+  const available = pageHeightPx - pagePaddingPx;
+  const count = Math.max(1, Math.floor((available + gapPx) / (blockHeight + gapPx)));
+  return count;
+}
+
+function recalcAndRender(){
+  const qty = autoCalcQty();
+  document.getElementById('qtyInput').value = qty;
+  renderPreview(qty);
+}
+
+function renderAll(){
+  renderAddrList('senderList', senders, 'sender');
+  renderAddrList('recipientList', recipients, 'recipient');
+  renderForms();
+  renderSelects();
+  if(senders.length && recipients.length){
+    recalcAndRender();
+  }else{
+    renderPreview(0);
+  }
+}
+
+document.getElementById('recalcBtn').addEventListener('click', recalcAndRender);
+document.getElementById('qtyInput').addEventListener('change', (e)=>{
+  let v = parseInt(e.target.value, 10);
+  if(!v || v < 1) v = 1;
+  e.target.value = v;
+  renderPreview(v);
+});
+document.getElementById('senderSelect').addEventListener('change', recalcAndRender);
+document.getElementById('recipientSelect').addEventListener('change', recalcAndRender);
+document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+document.getElementById('fontSizeInput').addEventListener('input', (e)=>{
+  const px = e.target.value;
+  document.getElementById('printArea').style.setProperty('--lbl-font-size', px + 'px');
+  document.getElementById('fontSizeValue').textContent = px + 'px';
+});
+
+// seed example data on first run so the tool isn't empty
+if(senders.length === 0 && recipients.length === 0 && !localStorage.getItem('labelTool_seeded')){
+  senders.push({id:uid(), name:'王世豐 先生', postal:'333', address:'桃園市龜山區樂學路 556 號 15 樓', phone:''});
+  recipients.push({id:uid(), name:'美麗家工程有限公司 敬啟 / 收', postal:'23643', address:'新北市土城區金城路 3 段 8 號 5F', phone:'02-22611233'});
+  saveList(SENDER_KEY, senders);
+  saveList(RECIPIENT_KEY, recipients);
+  localStorage.setItem('labelTool_seeded', '1');
+}
+
+renderAll();
+</script>
+</body>
+</html>
